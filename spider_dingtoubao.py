@@ -29,15 +29,15 @@ def calc_some_one(code,once_money,start_day,end_day):
     print('基金名称[%s]：%s,单次购买:%s元, 开始时间:%s,结束时间:%s'%(str(code),fund_name,once_money,start_day,end_day))
     p=pq(findHtml(code,start_day,end_day))
 
-    td_list=p("tbody tr td:lt(2)")
-    my_list = [([0] * 2) for i in range(int(len(td_list)/2))]
+    td_list=p("tbody tr td:lt(3)")
+    my_list = [([0] * 3) for i in range(int(len(td_list)/3))]
 
     if len(td_list)==1:
        print('\t暂无数据')
        return
 
     for a in range(len(td_list)):
-        my_list[math.floor(a/2)][a%2]=p(td_list[a]).html()
+        my_list[math.floor(a/3)][a%3]=p(td_list[a]).html()
 
     price_now=my_list[0][1]
 
@@ -45,23 +45,24 @@ def calc_some_one(code,once_money,start_day,end_day):
         conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd='root', db='fund_db',charset='utf8')
         conn.encoding='UTF-8'
         cursor = conn.cursor()
-        sql_basic="insert into fund_basic(fund_code,fund_name,today,price,earn_per,cost_all,now_all)\n"
-        sql_basic+=" values('%s','%s','%s','%s',%.2f,%.2f,%s)"
+        sql_basic="insert into fund_basic(fund_code,fund_name,today,dot,price,price_addtion,earn_per,cost_all,now_all)\n"
+        sql_basic+=" values('%s','%s','%s','%s','%s',%s,%s,%s,%s)"
         dics=['星期一','星期二','星期三','星期四','星期五','星期六','星期日']
         dot = 0
         buy_time = 0
         my_list.reverse()
 
-        for dt, price in my_list:
+        for dt, price,price_addtion in my_list:
             st = time.strptime(dt, "%Y-%m-%d")
             if buy_day==-1 or st.tm_wday == buy_day:
                 dot += once_money / float(price)
                 buy_time += 1
-                now_all = dot * float(price)
+                now_all = dot * float(price_addtion)
                 cost_all = buy_time * float(once_money)
                 earn_per = (now_all - cost_all) * 100 / cost_all
-                print(sql_basic%(code, fund_name, dt, price, earn_per, now_all, cost_all))
-                cursor.execute(sql_basic%(code, fund_name, dt, price, earn_per, now_all, cost_all))
+                sql_exec=sql_basic%(code, fund_name, dt,dot, price,price_addtion, earn_per,  cost_all,now_all)
+                print(sql_exec)
+                cursor.execute(sql_exec)
         now_all=dot*float(price_now)
         cost_all=buy_time*once_money
         earn_per=(now_all-cost_all)*100/cost_all
